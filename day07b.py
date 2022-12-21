@@ -10,6 +10,7 @@ from pprint import pprint
 from collections import defaultdict
 
 DEBUG = os.environ.get("DEBUG")
+SPARSE = os.environ.get("SPARSE")
 
 def main():
     index_seq = itertools.count()
@@ -52,24 +53,29 @@ def main():
     # the size of path with index j.
     # As a special case, size_part[i][i] is 1 for non-directories i (so that
     # their entries in the size vector stay unchanged).
-    size_part = np.zeros((n, n), dtype=int)
+    if SPARSE:
+        from scipy import sparse
+        size_part = sparse.dok_matrix((n, n), dtype=int)
+    else:
+        size_part = np.zeros((n, n), dtype=int)
     for path, j in index.items():
         if len(path) == 0:
             continue
         parent = path[:-1]
         i = index[parent]
-        size_part[i][j] = 1
+        size_part[i, j] = 1
+    print(size_part.shape)
 
     size = np.zeros((n), dtype=int)
     for path, m in size_by_path.items():
         i = index[path]
         if m != 0:
-            size_part[i][i] = 1
+            size_part[i, i] = 1
             size[i] = m
     dir = (size == 0)
 
     # One multiplication of size_part by size brings the sums up one level.
-    while (((new_size := np.matmul(size_part, size)) != size).any()):
+    while ((new_size := size_part @ size) != size).any():
         size = new_size
 
     if DEBUG:
