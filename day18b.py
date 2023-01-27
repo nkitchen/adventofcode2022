@@ -19,13 +19,17 @@ def main():
 
     a_lava = np.loadtxt(inp, delimiter=',', dtype=int)
 
-    # Looking at the point cloud, it appears that the lava droplet is concave, and so
-    # it's easy to recognize air pockets by simply comparing to the min and max lava cubes 
-    # in a line through the droplet.
-
-    # An approach for the general case is at the bottom of this file.
-
     s_lava = set(tuple(v) for v in a_lava)
+
+    OUTSIDE = 0
+    LAVA = 1
+    BETWEEN = 2
+
+    c_class = defaultdict(int)
+    for c in s_lava:
+        c_class[c] = LAVA
+
+    # Find cubes that are Between cubes of Lava.
 
     lava_by_xy = defaultdict(list)
     for cube in s_lava:
@@ -34,9 +38,11 @@ def main():
     for a in lava_by_xy.values():
         a.sort()
 
-    def is_outside(c):
-        s = lava_by_xy.get(c[:2], None)
-        return not s or c[2] < s[0][2] or c[2] > s[-1][2]
+    for xy, line in lava_by_xy.items():
+        for z in range(line[0][2], line[-1][2] + 1):
+            c = xy + (z,)
+            if c not in s_lava:
+                c_class[c] = BETWEEN
 
     def _neighbors(c):
         for i in range(len(c)):
@@ -46,28 +52,40 @@ def main():
             a[i] += 2
             yield tuple(a)
 
+    # For each Between cube:
+    #   If it has a neighbor that is Outside,
+    #     Change its class to Outside, and put it on the queue.
+    queue = []
+    for cube, cl in c_class.items():
+        if cl != BETWEEN:
+            continue
+        if any(c_class.get(n, OUTSIDE) == OUTSIDE for n in _neighbors(cube)):
+            c_class[cube] = OUTSIDE
+            queue.append(cube)
+
+    # Propagate the Outside class as long as we keep finding neighboring Between cubes.
+    while queue:
+        c = queue[0]
+        queue = queue[1:]
+
+        for n in _neighbors(c):
+            if c_class[n] == BETWEEN:
+                c_class[n] = OUTSIDE
+                queue.append(n)
+
+    if len(sys.argv) > 2:
+        with open(sys.argv[2], "w") as f:
+            for cube, cl in c_class.items():
+                print(f"{cube[0]} {cube[1]} {cube[2]} {cl}", file=f)
+
+    # For each Lava cube:
+    #   Count the neighbors that are Outside.
     area = 0
     for c in s_lava:
         for n in _neighbors(c):
-            dprint(f"{c} neighbor: {n} ", end='')
-            if n in s_lava:
-                dprint("lava")
-            elif is_outside(n):
-                dprint("outside")
+            dprint(f"{c} neighbor: {n} {c_class[n]}")
+            if c_class[n] == OUTSIDE:
                 area += 1
-            else:
-                dprint("inside")
     print(area)
 
 main()
-
-# If the lava droplet were not convex, this would be my approach:
-#
-#   Find cubes that are Between cubes of Lava.
-#   Put all Between cubes on queue.
-#   For each cube on queue:
-#       If it has a neighbor that is Outside,
-#       Change its class to Outside and put its Between neighbors on the queue.
-#
-#   For each Lava cube:
-#       Count the neighbors that are Outside.
