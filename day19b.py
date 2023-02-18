@@ -2,6 +2,7 @@
 
 import io
 import os
+import natsort
 import numpy as np
 import re
 import signal
@@ -21,7 +22,7 @@ def dpretty(*args, **kwargs):
     if DEBUG:
         pprint(*args, **kwargs)
 
-T_MAX = 24
+T_MAX = 32
 
 ORE = 0
 CLAY = 1
@@ -41,8 +42,14 @@ def main():
             req = bp[r][bp[r] > 0]
             assert sorted(req) == list(req)
 
-    qualities = [id * max_geodes(bp) for id, bp in blueprints.items()]
-    print(sum(qualities))
+    r = 1
+    for id in natsort.natsorted(blueprints)[:3]:
+        bp = blueprints[id]
+        g = max_geodes(bp)
+        print(g)
+        r *= g
+
+    print(r)
 
 kind_index = {
     'ore': ORE,

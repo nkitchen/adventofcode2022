@@ -1,0 +1,144 @@
+"Bottom-up" search for a schedule is too slow.  Can I figure out how to do it
+"top-down" from the geode goal?
+
+Simplified version: 3 robot types
+
+Blueprint:
+  [[2 0 0]
+   [4 0 0]
+   [1 3 0]]
+
+Greedy approach: Build the max robot possible, as soon as possible.
+Build clay robots in preference to ore robots.
+
+Toggle approach: Build obsidian robots when possible, but otherwise
+alternate between building ore and clay robots.
+
+    Greedy      Toggle
+  r=1 0 0       1 0 0
+  m=0 0 0       0 0 0
+
+    1 0 0w      1 0 0
+    1 0 0       1 0 0
+
+    1 0 0w      1 0 0
+    2 0 0       2 0 0
+
+    1 0 0w      2 0 0
+    3 0 0       1 0 0
+
+    1 0 0w      2 0 0
+    4 0 0       3 0 0
+
+    1 1 0       2 0 0
+    1 0 0       5 0 0
+
+    1 1 0w      2 1 0
+    2 1 0       3 0 0
+
+    1 1 0w      3 1 0
+    3 2 0       3 1 0
+
+    1 1 0w      3 1 0
+    4 3 0       6 2 0
+
+    1 1 1       3 2 0
+    4 1 0       5 3 0
+
+    1 2 1       3 2 1
+    1 2 1       7 2 0
+
+    1 2 1w      4 2 1
+    2 4 2       8 4 1
+
+    1 2 2       4 2 2
+    2 3 3      11 3 2
+
+    1 2 3       4 2 3
+    2 2 5      14 2 4
+
+    1 2 3w      4 3 3
+    3 4 8      14 4 7
+
+    1 2 4       4 3 4
+    3 3 11     17 4 10
+
+    1 2 5       4 3 5
+    3 2 15     20 7 14
+
+    1 2 5       4 3 6
+    4 4 20     23 7 19
+
+    1 2 6       4 3 7
+    4 3 25     26 7 25
+
+Observed structure of the example and of my input:
+Nonzero mineral requirements are all > 1.
+If a robot requires multiple minerals, then req[ORE] < req[other].
+
+ex19.txt blueprints:
+[[ 4  0  0  0]
+ [ 2  0  0  0]
+ [ 3 14  0  0]
+ [ 2  0  7  0]]
+
+[[ 2  0  0  0]
+ [ 3  0  0  0]
+ [ 3  8  0  0]
+ [ 3  0 12  0]]
+
+Implication: The higher mineral will be the bottleneck in every case.
+
+Example blueprint 1:
+Each geode robot requires 2 ore and 7 obsidian.
+==> 2 ore + 7 * (3 ore + 14 clay)
+==> 23 ore + 7 * 14 * (2 ore)
+==> 219 ore
+
+1 0 0 0
+0 0 0 0
+
+1 0 0 0
+1 0 0 0
+
+1 0 0 0
+2 0 0 0
+
+1 1 0 0
+1 0 0 0
+
+1 1 0 0
+2 1 0 0
+
+1 2 0 0
+1 2 0 0
+t=6
+1 2 0 0
+2 4 0 0
+
+1 3 0 0
+1 6 0 0
+
+1 3 0 0
+2 9 0 0
+
+1  3 0 0
+3 12 0 0
+
+1  3 0 0
+4 15 0 0
+
+1 3 1 0
+2 4 0 0
+t=12
+1 4 1 0
+1 7 1 0
+
+1  4 1 0
+2 11 2 0
+
+1  4 1 0
+3 15 3 0
+
+1  4 2 0
+1  5 4 0
