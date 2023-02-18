@@ -42,6 +42,19 @@ Approach:
        t' = t + 2 = 7
        m' = m + 2 * r - (0, 2, 0, 0)
        r' = r + (0, 1, 0, 0)
+
+Constraint:
+    Each mineral has a bottleneck -- the maximum number of
+    units that can be used in one minute.  It never makes
+    sense to build more robots for collecting that mineral
+    than the maximum consumption rate, because I can only
+    build a single robot per minute.
+
+    For clay and obsidian: the number of units used to build
+    a robot
+
+    For ore: the maximum number of units used to build any
+    type of robot
 """
 
 T_MAX = 24
@@ -55,6 +68,15 @@ def main():
     inp = open(sys.argv[1])
 
     blueprints = read_blueprints(inp)
+
+    # Check structure of mineral requirements.
+    for id, bp in blueprints.items():
+        assert (bp[bp > 0] > 1).all()
+
+        for r in range(bp.shape[0]):
+            req = bp[r][bp[r] > 0]
+            assert sorted(req) == list(req)
+
     qualities = [id * max_geodes(bp) for id, bp in blueprints.items()]
     print(qualities.sum())
 
@@ -71,6 +93,9 @@ def freeze(state):
     return (state.elapsed, tuple(state.mineral), tuple(state.robot))
 
 def max_geodes(blueprint):
+    max_rate = blueprint.max(axis=0)
+    max_rate[GEODE] = 1e6
+
     start = State(0, np.array([0.0, 0.0, 0.0, 0.0]), np.array([1.0, 0.0, 0.0, 0.0]))
 
     visited = set()
@@ -89,6 +114,9 @@ def max_geodes(blueprint):
 
         # Each robot kind
         for r in range(blueprint.shape[0]):
+            if s.robot[r] + 1 > max_rate[r]:
+                continue
+
             req = blueprint[r]
             if (s.mineral >= req).all():
                 # I have enough material.
