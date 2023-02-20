@@ -9,7 +9,7 @@ import sys
 from pprint import pprint
 from collections import namedtuple
 
-from cpmpy import *
+import sympy
 
 DEBUG = os.environ.get("DEBUG")
 
@@ -24,27 +24,30 @@ def dpretty(*args, **kwargs):
 def main():
     inp = open(sys.argv[1]).read()
 
-    vars = {}
-    for m in re.finditer(r"[a-z]{4}", inp):
-        name = m.group(0)
-        if name not in vars:
-            vars[name] = intvar(-2**31, 2**31, name=name)
-
-    model = Model()
+    vals = {}
     for line in io.StringIO(inp):
-        if line.startswith("root:"):
-            expr = line[5:].replace("+", "==")
-            model += eval(expr, None, vars)
-        elif line.startswith("humn:"):
-            continue
-        else:
-            expr = line.replace(":", "==")
-            expr = expr.replace("/", "//")
-            model += eval(expr, None, vars)
+        name, expr = line.split(": ")
+        vals[name] = expr.strip()
 
-    r = model.solve()
-    assert r
+    def _eval(name):
+        expr = vals[name]
+        if name == "root":
+            expr_lhs, expr_rhs = expr.split("+")
+            lhs = _eval(expr_lhs.strip())
+            rhs = _eval(expr_rhs.strip())
+            return sympy.Eq(lhs, rhs)
+        elif name == "humn":
+            expr = vals[name] = sympy.symbols('humn')
+        elif type(expr) == str:
+            names = re.findall(r"[a-z]{4}", expr)
+            for n in names:
+                _eval(n)
+            expr = vals[name] = eval(expr, None, vals)
 
-    print(vars['humn'].value())
+        return expr
+
+    e = _eval("root")
+    s = sympy.solve(e, vals['humn'])
+    print(s)
 
 main()
