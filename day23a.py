@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import io
+import itertools
 import os
 import numpy as np
 import re
@@ -21,28 +22,50 @@ def main():
     inp = inp.replace('#', '1')
     grove = np.genfromtxt(inp.split('\n'), delimiter=1, dtype=int)
 
-    elf_ij = np.argwhere(grove) # shape (nelf, 2)
-
     # Pad to ensure empty margin.
     empty_row = np.zeros((1, grove.shape[1]), dtype=int)
-    if (elf_ij[:, 0] == 0).any():
+    if grove[0, :].any():
         grove = np.vstack((empty_row, grove))
-        elf_ij += (1, 0)
-    if (elf_ij[:, 0] == grove.shape[0] - 1).any():
+    if grove[-1, :].any():
         grove = np.vstack((grove, empty_row))
     empty_col = np.zeros((grove.shape[0], 1), dtype=int)
-    if (elf_ij[:, 1] == 0).any():
+    if grove[:, 0].any():
         grove = np.hstack((empty_col, grove))
-        elf_ij += (0, 1)
-    if (elf_ij[:, 1] == grove.shape[1] - 1).any():
+    if grove[:, -1].any():
         grove = np.hstack((grove, empty_col))
 
-    nbr_ij = elf_ij[:, np.newaxis, :] + nbr_offsets[np.newaxis, ...]
-    # >>> shape (nelf, nnbr, 2)
+    m, n = grove.shape
 
-    print(at(grove, nbr_ij).any(axis=1))
+    nbrs = sum(grove[di:di+m-2, dj:dj+n-2]
+               for di in range(3)
+               for dj in range(3)
+               if (di, dj) != (1, 1))
 
-def at(map, idxs):
-    return map[(idxs[..., 0], idxs[..., 1])]
+    pending = grove[1:m-1, 1:n-1]
+    proposed = 0 * grove
+    
+    # Elves not moving
+    proposed[1:m-1, 1:n-1] += pending * (nbrs == 0)
+    pending *= (nbrs != 0)
+
+    # Elves proposing in each direction
+    north_nbrs = sum(grove[0:m-2, dj:dj+n-2] for dj in range(3))
+    proposed[0:m-2, 1:n-1] += pending * (north_nbrs == 0)
+    pending *= (north_nbrs != 0)
+
+    south_nbrs = sum(grove[2:m, dj:dj+n-2] for dj in range(3))
+    proposed[2:m, 1:n-1] += pending * (south_nbrs == 0)
+    pending *= (south_nbrs != 0)
+
+    west_nbrs = sum(grove[di:di+m-2, 0:n-2] for di in range(3))
+    proposed[1:m-1, 0:n-2] += pending * (west_nbrs == 0)
+    pending *= (west_nbrs != 0)
+
+    east_nbrs = sum(grove[di:di+m-2, 2:n] for di in range(3))
+    proposed[1:m-1, 2:n] += pending * (east_nbrs == 0)
+    pending *= (east_nbrs != 0)
+
+    # Now we can easily tell where there are collisions, but how do
+    # we tell which elves to keep in place?
 
 main()
