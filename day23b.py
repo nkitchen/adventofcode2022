@@ -27,7 +27,7 @@ def main():
 
     dir_pref = ['north', 'south', 'west', 'east']
 
-    for t in range(10):
+    for t in itertools.count(1):
         # Pad to ensure empty margin.
         empty_row = np.zeros((1, grove.shape[1]), dtype=int)
         if grove[0, :].any():
@@ -102,16 +102,7 @@ def main():
 
         dir_pref.append(dir_pref.pop(0))
 
-    elf_i, elf_j = grove.nonzero()
-    i_lo = elf_i.min()
-    i_hi = elf_i.max()
-    j_lo = elf_j.min()
-    j_hi = elf_j.max()
-
-    rect = grove[i_lo:i_hi+1, j_lo:j_hi+1]
-    h = i_hi - i_lo + 1
-    w = j_hi - j_lo + 1
-    print(w * h - rect.sum())
+    print(t)
 
 def show(a):
     for row in a:
